@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TuProfe20 Lab - Física: Empuje</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- KaTeX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+        
+        body { margin: 0; padding: 0; overflow: hidden; width: 100vw; height: 100dvh; user-select: none; background-color: #0f172a; }
+        .font-fun { font-family: 'Nunito', sans-serif; }
+        
+        @keyframes floatUp { 
+            0% { transform: translateY(105vh) rotate(0deg); } 
+            100% { transform: translateY(-105vh) rotate(360deg); } 
+        }
+        @keyframes slideInRight { 
+            0% { opacity: 0; transform: translateX(15px); } 
+            100% { opacity: 1; transform: translateX(0); } 
+        }
+        @keyframes jellyPop {
+            0% { transform: scale3d(.3, .3, .3); opacity: 0; }
+            20% { transform: scale3d(1.18, 1.18, 1.18); }
+            40% { transform: scale3d(.92, .92, .92); }
+            60% { transform: scale3d(1.06, 1.06, 1.06); opacity: 1; }
+            80% { transform: scale3d(.97, .97, .97); }
+            100% { transform: scale3d(1, 1, 1); opacity: 1; }
+        }
+        @keyframes robotFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        @keyframes wave {
+            0% { background-position-x: 0px; }
+            100% { background-position-x: 1000px; }
+        }
+
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .animate-floatUp { animation: floatUp linear infinite; }
+        .animate-slideInRight { animation: slideInRight 0.3s ease-out forwards; }
+        .animate-jellyPop { animation: jellyPop 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .animate-robotFloat { animation: robotFloat 3s ease-in-out infinite; }
+
+        .katex { font-weight: 900 !important; }
+        .katex-display { margin: 0 !important; padding: 0 !important; }
+        
+        .math-card .katex { font-size: clamp(0.9rem, 1.8vw, 1.25rem) !important; color: #0f172a !important; }
+        .math-enunciado .katex { font-size: clamp(0.9rem, 1.8vw, 1.4rem) !important; color: #ffffff !important; }
+        .math-current .katex { font-size: clamp(1rem, 2.5vw, 2.2rem) !important; color: #0f172a !important; }
+        .math-history .katex { font-size: clamp(0.9rem, 2vw, 1.6rem) !important; color: #334155 !important; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, memo } = React;
+
+        // SVG Icons
+        const Icon = ({ paths, className = "", size = 24, fill = "none", strokeWidth = "2.5" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} dangerouslySetInnerHTML={{__html: paths}} />
+        );
+        const VolumeX = (p) => <Icon {...p} paths='<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>' />;
+        const Volume2 = (p) => <Icon {...p} paths='<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>' />;
+        const Droplet = (p) => <Icon {...p} paths='<path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/>' />;
+        const Sparkles = (p) => <Icon {...p} paths='<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M3 5h4"/><path d="M19 3v4"/><path d="M17 5h4"/>' />;
+        const Home = (p) => <Icon {...p} paths='<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' />;
+        const ChevronLeft = (p) => <Icon {...p} paths='<polyline points="15 18 9 12 15 6"/>' />;
+        const ChevronRight = (p) => <Icon {...p} paths='<polyline points="9 18 15 12 9 6"/>' />;
+
+        // Audio System
+        const AudioController = {
+            ctx: null, muted: false,
+            init: function() {
+                if (this.ctx) return;
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) this.ctx = new AudioContext();
+            },
+            play: function(type) {
+                if (this.muted || !this.ctx) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                const now = this.ctx.currentTime;
+                
+                if (type === 'pop') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+                    gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now); osc.stop(now + 0.1);
+                } else if (type === 'success') {
+                    osc.disconnect();
+                    const notes = [440, 554.37, 659.25, 880];
+                    notes.forEach((freq, i) => {
+                        const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
+                        o.type = 'triangle'; o.frequency.value = freq;
+                        o.connect(g); g.connect(this.ctx.destination);
+                        const startTime = now + (i * 0.08);
+                        g.gain.setValueAtTime(0, startTime); g.gain.linearRampToValueAtTime(0.2, startTime + 0.04); g.gain.linearRampToValueAtTime(0, startTime + 0.4);
+                        o.start(startTime); o.stop(startTime + 0.4);
+                    });
+                }
+            },
+            toggleMute: function() { this.muted = !this.muted; return this.muted; }
+        };
+
+        const MathDisplay = memo(({ latex, className = "", inline = false }) => {
+            const containerRef = useRef(null);
+            useEffect(() => {
+                if (containerRef.current && window.katex) {
+                    try {
+                        window.katex.render(latex, containerRef.current, { displayMode: !inline, throwOnError: false });
+                    } catch (e) { containerRef.current.innerText = latex; }
+                }
+            }, [latex, inline]);
+            return inline ? <span ref={containerRef} className={`inline-block align-middle ${className}`} /> : <div className={`relative w-full flex justify-center ${className}`}><div ref={containerRef} className="w-full text-center" /></div>;
+        });
+
+        // Dynamic Physics Graphic Component
+        const PhysicsGraphic = memo(({ liquids = [], objShape = "box", objY = 50, forces = [], extraInfo = "" }) => {
+            return (
+                <div className="relative w-full max-w-sm h-48 sm:h-56 mx-auto bg-white rounded-xl shadow-inner border-4 border-slate-300 overflow-hidden flex flex-col justify-end">
+                    {/* Background Grid */}
+                    <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:10px_10px]"></div>
+                    
+                    {/* Liquids */}
+                    {liquids.map((liq, i) => (
+                        <div key={i} className="relative w-full flex items-center justify-center opacity-80 transition-all duration-500 border-t-2 border-white/40" style={{ height: `${liq.height}%`, backgroundColor: liq.color }}>
+                            {liq.label && <span className="absolute left-2 top-1 text-xs font-bold text-white/90 drop-shadow-md">{liq.label}</span>}
+                        </div>
+                    ))}
+
+                    {/* Submerged Object */}
+                    <div className="absolute left-1/2 -translate-x-1/2 transition-all duration-700 ease-in-out z-10 flex items-center justify-center" style={{ bottom: `${objY}%`, width: objShape === 'box' ? '60px' : '50px', height: objShape === 'box' ? '80px' : '50px' }}>
+                        <div className={`w-full h-full border-4 shadow-lg ${objShape === 'box' ? 'rounded-md' : 'rounded-full'} ${objShape === 'box' ? 'bg-amber-700 border-amber-900' : 'bg-slate-400 border-slate-600'}`}></div>
+                        
+                        {/* Force Vectors */}
+                        {forces.map((f, i) => {
+                            const isUp = f.dir === 'up';
+                            return (
+                                <div key={i} className={`absolute flex flex-col items-center ${isUp ? 'bottom-full mb-1' : 'top-full mt-1'} ${f.offset ? f.offset : ''}`}>
+                                    {isUp && <span className="text-xs font-black drop-shadow-md" style={{ color: f.color }}>{f.name}</span>}
+                                    <svg width="16" height="30" viewBox="0 0 16 30" fill="none" className={isUp ? '' : 'rotate-180 drop-shadow-md'}>
+                                        <path d="M8 30L8 2M8 2L2 8M8 2L14 8" stroke={f.color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                    {!isUp && <span className="text-xs font-black drop-shadow-md mt-1" style={{ color: f.color }}>{f.name}</span>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {extraInfo && <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded shadow text-xs font-bold text-slate-800">{extraInfo}</div>}
+                </div>
+            );
+        });
+
+        // 15 Exercises DB
+        const EXERCISES = [
+            {
+                id: 1, title: "Ejercicio 1", subtitle: "Empuje Básico",
+                badge: "bg-blue-500", grad: "from-blue-600/30 to-cyan-500/30 border-blue-400",
+                enunciado: () => <span>Un objeto de <MathDisplay inline latex="7 m^3" /> flota en el agua. Si el volumen emergido es <MathDisplay inline latex="6 m^3" />, calcula el módulo de la fuerza de empuje en kN. (<MathDisplay inline latex="g = 10 m/s^2" />)</span>,
+                steps: [
+                    { latex: String.raw`V_T = V_E + V_S`, text: "Identificamos volúmenes", speech: "Primero, recordemos que el volumen total de un cuerpo flotando es la suma del volumen emergido (afuera) y el volumen sumergido (adentro).", graphic: <PhysicsGraphic liquids={[{height:50, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={35} extraInfo="Flotando" /> },
+                    { latex: String.raw`7 = 6 + V_S \implies V_S = 1 m^3`, text: "Calculamos volumen sumergido", speech: "Si el total es 7 y 6 están afuera, lógicamente solo 1 metro cúbico está bajo el agua." },
+                    { latex: String.raw`E = \rho_{\text{liq}} \cdot g \cdot V_S`, text: "Principio de Arquímedes", speech: "Aplicamos la fórmula del Empuje Hidrostático. Depende de la densidad del líquido, la gravedad y el volumen sumergido." },
+                    { latex: String.raw`E = 1000 \cdot 10 \cdot 1 = 10000 \text{ N}`, text: "Reemplazando datos", speech: "La densidad del agua es 1000 kg/m³. Multiplicamos 1000 por 10 y por 1, obteniendo 10,000 Newtons.", graphic: <PhysicsGraphic liquids={[{height:50, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={35} forces={[{name:'E', dir:'up', color:'#22c55e'}]} extraInfo="Flotando" /> },
+                    { latex: String.raw`E = \mathbf{10 \text{ kN}}`, text: "Respuesta Final", speech: "Como nos piden la respuesta en kiloNewtons (kN), dividimos entre 1000. ¡El empuje es 10 kN!" }
+                ]
+            },
+            {
+                id: 2, title: "Ejercicio 2", subtitle: "Cálculo Directo",
+                badge: "bg-cyan-500", grad: "from-cyan-600/30 to-teal-500/30 border-cyan-400",
+                enunciado: () => <span>Un cuerpo de <MathDisplay inline latex="8 m^3" /> flota en el agua. Si el volumen sumergido es de <MathDisplay inline latex="5 m^3" />, determina el módulo de la fuerza de empuje en kN. (<MathDisplay inline latex="g = 10 m/s^2" />)</span>,
+                steps: [
+                    { latex: String.raw`V_S = 5 m^3`, text: "Volumen Sumergido", speech: "En este caso, ya nos dan directamente el volumen que está bajo el agua, que es 5 m³.", graphic: <PhysicsGraphic liquids={[{height:60, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={25} /> },
+                    { latex: String.raw`E = \rho_{\text{agua}} \cdot g \cdot V_S`, text: "Fórmula de Empuje", speech: "Usamos la fórmula clásica de Arquímedes. ¡Atención! Solo usamos el volumen sumergido, el volumen total no nos sirve aquí." },
+                    { latex: String.raw`E = 1000 \cdot 10 \cdot 5`, text: "Sustituyendo Valores", speech: "Multiplicamos la densidad del agua (1000) por la gravedad (10) y por el volumen bajo el agua (5)." },
+                    { latex: String.raw`E = 50000 \text{ N} = \mathbf{50 \text{ kN}}`, text: "Solución", speech: "El resultado es 50,000 N, que convertido a kiloNewtons equivale a 50 kN. ¡Perfecto!", graphic: <PhysicsGraphic liquids={[{height:60, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={25} forces={[{name:'E=50kN', dir:'up', color:'#22c55e'}]} /> }
+                ]
+            },
+            {
+                id: 3, title: "Ejercicio 3", subtitle: "Sumergido Totalmente",
+                badge: "bg-teal-500", grad: "from-teal-600/30 to-emerald-500/30 border-teal-400",
+                enunciado: () => <span>Un cuerpo de <MathDisplay inline latex="0.3 m^3" /> de volumen se introduce completamente en agua. ¿Cuál es el módulo del empuje en kN que recibe?</span>,
+                steps: [
+                    { latex: String.raw`V_S = V_T = 0.3 m^3`, text: "Inmersión Total", speech: "Al estar 'completamente introducido', el volumen sumergido es igual al volumen total del cuerpo.", graphic: <PhysicsGraphic liquids={[{height:90, color:'#3b82f6', label:'Agua'}]} objShape="sphere" objY={20} /> },
+                    { latex: String.raw`E = \rho_{\text{agua}} \cdot g \cdot V_S`, text: "Aplicando Fórmula", speech: "Llamamos nuevamente a la fórmula del empuje hidrostático." },
+                    { latex: String.raw`E = 1000 \cdot 10 \cdot 0.3`, text: "Calculando", speech: "Multiplicamos 1000 x 10 x 0.3. La coma decimal se mueve un espacio a la derecha." },
+                    { latex: String.raw`E = 3000 \text{ N} = \mathbf{3 \text{ kN}}`, text: "Resultado", speech: "El empuje es 3,000 N, que equivale a 3 kiloNewtons.", graphic: <PhysicsGraphic liquids={[{height:90, color:'#3b82f6', label:'Agua'}]} objShape="sphere" objY={20} forces={[{name:'E=3kN', dir:'up', color:'#22c55e'}]} /> }
+                ]
+            },
+            {
+                id: 4, title: "Ejercicio 4", subtitle: "Otros Líquidos",
+                badge: "bg-emerald-500", grad: "from-emerald-600/30 to-green-500/30 border-emerald-400",
+                enunciado: () => <span>Calcula el empuje (en N) que experimenta un cuerpo de <MathDisplay inline latex="0.04 m^3" /> totalmente sumergido en alcohol (<MathDisplay inline latex="\rho_{\text{alc}} = 750 \text{ kg/m}^3" />).</span>,
+                steps: [
+                    { latex: String.raw`\rho_{\text{alc}} = 750 \text{ kg/m}^3`, text: "Cambio de Fluido", speech: "¡Cuidado! Esta vez no es agua, sino alcohol. Su densidad es menor, por lo que el empuje será distinto.", graphic: <PhysicsGraphic liquids={[{height:80, color:'#d946ef', label:'Alcohol'}]} objShape="box" objY={10} extraInfo="Sumergido total" /> },
+                    { latex: String.raw`E = \rho_{\text{alc}} \cdot g \cdot V_S`, text: "Fórmula General", speech: "La fórmula sirve para cualquier líquido, solo debemos usar la densidad correcta." },
+                    { latex: String.raw`E = 750 \cdot 10 \cdot 0.04`, text: "Reemplazando", speech: "Multiplicamos 750 por 10 (que nos da 7500) y luego por 0.04." },
+                    { latex: String.raw`E = \mathbf{300 \text{ N}}`, text: "Respuesta", speech: "El cálculo nos da 300 Newtons. Como el problema pide en Newtons, ya terminamos.", graphic: <PhysicsGraphic liquids={[{height:80, color:'#d946ef', label:'Alcohol'}]} objShape="box" objY={10} forces={[{name:'E=300N', dir:'up', color:'#22c55e'}]} extraInfo="Sumergido total" /> }
+                ]
+            },
+            {
+                id: 5, title: "Ejercicio 5", subtitle: "Fracciones de Volumen",
+                badge: "bg-green-500", grad: "from-green-600/30 to-lime-500/30 border-green-400",
+                enunciado: () => <span>Un cuerpo cilíndrico de <MathDisplay inline latex="8 m^3" /> está sumergido hasta sus <MathDisplay inline latex="3/4" /> partes en agua. Determina el empuje (en kN).</span>,
+                steps: [
+                    { latex: String.raw`V_S = \frac{3}{4} \cdot V_T`, text: "Planteando la Fracción", speech: "El problema nos indica que solo 3 cuartas partes del volumen total están bajo el agua.", graphic: <PhysicsGraphic liquids={[{height:60, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={15} /> },
+                    { latex: String.raw`V_S = \frac{3}{4} \cdot 8 = 6 m^3`, text: "Volumen Sumergido", speech: "Calculamos los 3/4 de 8. Dividimos 8 entre 4 y multiplicamos por 3. Obtenemos 6 m³." },
+                    { latex: String.raw`E = 1000 \cdot 10 \cdot 6`, text: "Fórmula de Empuje", speech: "Con el volumen sumergido listo, lo metemos a nuestra confiable fórmula con la densidad del agua." },
+                    { latex: String.raw`E = 60000 \text{ N} = \mathbf{60 \text{ kN}}`, text: "Resultado Final", speech: "Obtenemos 60,000 N, que en kiloNewtons son 60 kN.", graphic: <PhysicsGraphic liquids={[{height:60, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={15} forces={[{name:'E=60kN', dir:'up', color:'#22c55e'}]} /> }
+                ]
+            },
+            {
+                id: 6, title: "Ejercicio 6", subtitle: "Más Fracciones",
+                badge: "bg-lime-500", grad: "from-lime-600/30 to-yellow-500/30 border-lime-400",
+                enunciado: () => <span>Un cuerpo de <MathDisplay inline latex="20 m^3" /> está sumergido en agua hasta sus <MathDisplay inline latex="4/5" /> partes. Calcula el empuje (en kN).</span>,
+                steps: [
+                    { latex: String.raw`V_S = \frac{4}{5} \cdot 20`, text: "Buscando Volumen Sumergido", speech: "Igual que antes. Esta vez está sumergido 4 quintas partes de su volumen total de 20 m³.", graphic: <PhysicsGraphic liquids={[{height:70, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={10} /> },
+                    { latex: String.raw`V_S = 16 m^3`, text: "Operando", speech: "20 dividido entre 5 es 4. Multiplicado por 4 nos da un volumen sumergido de 16 m³." },
+                    { latex: String.raw`E = 1000 \cdot 10 \cdot 16`, text: "Ecuación", speech: "Sustituimos la densidad, gravedad y el volumen hallado." },
+                    { latex: String.raw`E = 160000 \text{ N} = \mathbf{160 \text{ kN}}`, text: "Solución", speech: "¡Exacto! Son 160,000 Newtons, o simplemente 160 kN.", graphic: <PhysicsGraphic liquids={[{height:70, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={10} forces={[{name:'E=160kN', dir:'up', color:'#22c55e'}]} /> }
+                ]
+            },
+            {
+                id: 7, title: "Ejercicio 7", subtitle: "Densidad Flotante",
+                badge: "bg-yellow-500", grad: "from-yellow-600/30 to-amber-500/30 border-yellow-400",
+                enunciado: () => <span>Un bloque está flotando en el agua con el 75% de su volumen sumergido. Calcula la densidad del bloque.</span>,
+                steps: [
+                    { latex: String.raw`\rho_C = \left(\frac{V_S}{V_T}\right) \cdot \rho_L`, text: "Fórmula Especial", speech: "Cuando un cuerpo flota, su densidad es directamente proporcional a la fracción de volumen que se hunde.", graphic: <PhysicsGraphic liquids={[{height:60, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={15} /> },
+                    { latex: String.raw`\frac{V_S}{V_T} = 75\% = 0.75`, text: "Proporción Sumergida", speech: "Nos dicen que el 75% está hundido. En decimales, esto es 0.75." },
+                    { latex: String.raw`\rho_C = 0.75 \cdot 1000`, text: "Reemplazando", speech: "Multiplicamos 0.75 por la densidad del líquido, que al ser agua, es 1000." },
+                    { latex: String.raw`\rho_C = \mathbf{750 \text{ kg/m}^3}`, text: "Densidad Hallada", speech: "La densidad del bloque es 750 kg/m³. Al ser menor que 1000, ¡tiene sentido que flote!", graphic: <PhysicsGraphic liquids={[{height:60, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={15} extraInfo="ρ = 750 kg/m³" /> }
+                ]
+            },
+            {
+                id: 8, title: "Ejercicio 8", subtitle: "Múltiples Líquidos I",
+                badge: "bg-amber-500", grad: "from-amber-600/30 to-orange-500/30 border-amber-400",
+                enunciado: () => <span>Calcula el empuje (en kN) sobre un cuerpo sumergido en 2 líquidos: <MathDisplay inline latex="\rho_1 = 800" /> (<MathDisplay inline latex="V_1 = 2 m^3" />) y <MathDisplay inline latex="\rho_2 = 1200" /> (<MathDisplay inline latex="V_2 = 8 m^3" />).</span>,
+                steps: [
+                    { latex: String.raw`E_{\text{neto}} = E_1 + E_2`, text: "Empuje Resultante", speech: "Cuando hay varios líquidos, el empuje total es la suma de los empujes parciales que ejerce cada líquido.", graphic: <PhysicsGraphic liquids={[{height:50, color:'#f59e0b', label:'Liq 2'}, {height:40, color:'#38bdf8', label:'Liq 1'}]} objShape="box" objY={35} /> },
+                    { latex: String.raw`E_1 = 800 \cdot 10 \cdot 2 = 16000 \text{ N}`, text: "Empuje del Líquido 1", speech: "Calculamos el empuje que genera el líquido de arriba usando su propia densidad y volumen ocupado." },
+                    { latex: String.raw`E_2 = 1200 \cdot 10 \cdot 8 = 96000 \text{ N}`, text: "Empuje del Líquido 2", speech: "Hacemos lo mismo para el líquido más denso que está abajo." },
+                    { latex: String.raw`E_{\text{neto}} = 16000 + 96000 = \mathbf{112 \text{ kN}}`, text: "Suma Final", speech: "Sumamos 16,000 + 96,000 = 112,000 N. Y en kiloNewtons resulta 112 kN.", graphic: <PhysicsGraphic liquids={[{height:50, color:'#f59e0b', label:'Liq 2'}, {height:40, color:'#38bdf8', label:'Liq 1'}]} objShape="box" objY={35} forces={[{name:'E_R', dir:'up', color:'#22c55e'}]} /> }
+                ]
+            },
+            {
+                id: 9, title: "Ejercicio 9", subtitle: "Múltiples Líquidos II",
+                badge: "bg-orange-500", grad: "from-orange-600/30 to-red-500/30 border-orange-400",
+                enunciado: () => <span>Determina el empuje (en kN) sobre el cuerpo en dos líquidos: <MathDisplay inline latex="\rho_1 = 300" /> (<MathDisplay inline latex="V_1 = 6 m^3" />) y <MathDisplay inline latex="\rho_2 = 700" /> (<MathDisplay inline latex="V_2 = 7 m^3" />).</span>,
+                steps: [
+                    { latex: String.raw`E_{\text{neto}} = E_1 + E_2`, text: "Teoría Aplicada", speech: "Igual que el problema anterior, calculamos el aporte de cada líquido por separado.", graphic: <PhysicsGraphic liquids={[{height:50, color:'#fca5a5', label:'Liq 2'}, {height:40, color:'#86efac', label:'Liq 1'}]} objShape="box" objY={35} /> },
+                    { latex: String.raw`E_1 = 300 \cdot 10 \cdot 6 = 18000 \text{ N}`, text: "Líquido Superior", speech: "Densidad 300 por gravedad 10 por volumen 6 nos da 18,000 Newtons." },
+                    { latex: String.raw`E_2 = 700 \cdot 10 \cdot 7 = 49000 \text{ N}`, text: "Líquido Inferior", speech: "Densidad 700 por gravedad 10 por volumen 7 resulta en 49,000 Newtons." },
+                    { latex: String.raw`E_{\text{neto}} = 18000 + 49000 = \mathbf{67 \text{ kN}}`, text: "Solución Total", speech: "Al sumarlos obtenemos 67,000 N, que es lo mismo que 67 kiloNewtons.", graphic: <PhysicsGraphic liquids={[{height:50, color:'#fca5a5', label:'Liq 2'}, {height:40, color:'#86efac', label:'Liq 1'}]} objShape="box" objY={35} forces={[{name:'E_R=67kN', dir:'up', color:'#22c55e'}]} /> }
+                ]
+            },
+            {
+                id: 10, title: "Ejercicio 10", subtitle: "Fuerzas en Equilibrio",
+                badge: "bg-red-500", grad: "from-red-600/30 to-rose-500/30 border-red-400",
+                enunciado: () => <span>Un bloque "m" está sumergido y es jalado hacia arriba con una fuerza <MathDisplay inline latex="F = 300 \text{ N}" />. Si el empuje vale <MathDisplay inline latex="500 \text{ N}" /> y hay equilibrio, ¿Cuál es el peso?</span>,
+                steps: [
+                    { latex: String.raw`\Sigma F_{\text{arriba}} = \Sigma F_{\text{abajo}}`, text: "1ra Condición de Equilibrio", speech: "Para que el bloque no se mueva, las fuerzas que lo tiran hacia arriba deben igualar a las que lo jalan hacia abajo.", graphic: <PhysicsGraphic liquids={[{height:80, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={20} forces={[{name:'W', dir:'down', color:'#ef4444'}]} /> },
+                    { latex: String.raw`F + E = W`, text: "Fuerzas Actuantes", speech: "Hacia arriba tenemos la fuerza externa F y el empuje E. Hacia abajo solo tenemos el peso W.", graphic: <PhysicsGraphic liquids={[{height:80, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={20} forces={[{name:'F', dir:'up', color:'#f59e0b', offset:'ml-6'}, {name:'E', dir:'up', color:'#22c55e', offset:'-ml-6'}, {name:'W', dir:'down', color:'#ef4444'}]} /> },
+                    { latex: String.raw`300 + 500 = W`, text: "Reemplazo", speech: "Sustituimos los datos que nos dio el problema." },
+                    { latex: String.raw`W = \mathbf{800 \text{ N}}`, text: "Peso Hallado", speech: "Sumando, deducimos que el peso real del bloque es 800 Newtons.", graphic: <PhysicsGraphic liquids={[{height:80, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={20} forces={[{name:'F=300', dir:'up', color:'#f59e0b', offset:'ml-6'}, {name:'E=500', dir:'up', color:'#22c55e', offset:'-ml-6'}, {name:'W=800', dir:'down', color:'#ef4444'}]} /> }
+                ]
+            },
+            {
+                id: 11, title: "Ejercicio 11", subtitle: "Tensión en la Cuerda",
+                badge: "bg-rose-500", grad: "from-rose-600/30 to-pink-500/30 border-rose-400",
+                enunciado: () => <span>Un cuerpo de <MathDisplay inline latex="54 \text{ kg}" /> se sumerge en agua. Si el empuje es <MathDisplay inline latex="260 \text{ N}" />, calcula la tensión en la cuerda que lo sostiene.</span>,
+                steps: [
+                    { latex: String.raw`W = m \cdot g = 54 \cdot 10 = 540 \text{ N}`, text: "Calculando el Peso", speech: "Primero, necesitamos saber cuánto pesa el cuerpo. Multiplicamos su masa (54) por la gravedad (10).", graphic: <PhysicsGraphic liquids={[{height:90, color:'#3b82f6', label:'Agua'}]} objShape="sphere" objY={30} forces={[{name:'W=540', dir:'down', color:'#ef4444'}]} /> },
+                    { latex: String.raw`T + E = W`, text: "Equilibrio", speech: "La cuerda (T) lo sostiene hacia arriba, el agua (E) también lo empuja hacia arriba, y el peso (W) lo jala abajo.", graphic: <PhysicsGraphic liquids={[{height:90, color:'#3b82f6', label:'Agua'}]} objShape="sphere" objY={30} forces={[{name:'E', dir:'up', color:'#22c55e', offset:'-ml-6'}, {name:'T', dir:'up', color:'#f59e0b', offset:'ml-6'}, {name:'W', dir:'down', color:'#ef4444'}]} /> },
+                    { latex: String.raw`T + 260 = 540`, text: "Sustituyendo E y W", speech: "Reemplazamos el empuje que nos dieron (260) y el peso que calculamos (540)." },
+                    { latex: String.raw`T = 540 - 260 = \mathbf{280 \text{ N}}`, text: "Tensión Final", speech: "Al restar, descubrimos que la cuerda está soportando una tensión de 280 Newtons.", graphic: <PhysicsGraphic liquids={[{height:90, color:'#3b82f6', label:'Agua'}]} objShape="sphere" objY={30} forces={[{name:'E=260', dir:'up', color:'#22c55e', offset:'-ml-6'}, {name:'T=280', dir:'up', color:'#f59e0b', offset:'ml-6'}, {name:'W=540', dir:'down', color:'#ef4444'}]} /> }
+                ]
+            },
+            {
+                id: 12, title: "Ejercicio 12", subtitle: "Tensión Calculada",
+                badge: "bg-pink-500", grad: "from-pink-600/30 to-fuchsia-500/30 border-pink-400",
+                enunciado: () => <span>Calcula la tensión en la cuerda de una esfera de <MathDisplay inline latex="8 \text{ kg}" /> y volumen <MathDisplay inline latex="14 \times 10^{-3} m^3" /> sumergida en agua.</span>,
+                steps: [
+                    { latex: String.raw`W = 8 \cdot 10 = 80 \text{ N}`, text: "Peso de la esfera", speech: "La masa es 8 kg, así que el peso es de 80 Newtons apuntando hacia el fondo.", graphic: <PhysicsGraphic liquids={[{height:80, color:'#3b82f6', label:'Agua'}]} objShape="sphere" objY={40} forces={[{name:'W=80', dir:'down', color:'#ef4444'}]} /> },
+                    { latex: String.raw`E = 1000 \cdot 10 \cdot 14 \times 10^{-3}`, text: "Calculando el Empuje", speech: "Aplicamos la fórmula del empuje. El exponente negativo del volumen se cancelará mágicamente con los ceros del 1000." },
+                    { latex: String.raw`E = 140 \text{ N}`, text: "Empuje Obtenido", speech: "1000 x 10 es 10000. Al multiplicarlo por 14 milésimos, nos queda 140 N de fuerza hacia arriba.", graphic: <PhysicsGraphic liquids={[{height:80, color:'#3b82f6', label:'Agua'}]} objShape="sphere" objY={40} forces={[{name:'E=140', dir:'up', color:'#22c55e'}, {name:'W=80', dir:'down', color:'#ef4444'}]} /> },
+                    { latex: String.raw`T + W = E \implies T + 80 = 140`, text: "DCL y Equilibrio", speech: "Nota: Como el empuje (140) es mayor al peso (80), ¡la esfera quiere flotar! La cuerda debe estar jalando hacia ABAJO para retenerla." },
+                    { latex: String.raw`T = \mathbf{60 \text{ N}}`, text: "Resultado", speech: "Despejamos T restando 140 menos 80. La tensión de la cuerda es 60 Newtons.", graphic: <PhysicsGraphic liquids={[{height:80, color:'#3b82f6', label:'Agua'}]} objShape="sphere" objY={40} forces={[{name:'E=140', dir:'up', color:'#22c55e'}, {name:'W=80', dir:'down', color:'#ef4444', offset:'ml-6'}, {name:'T=60', dir:'down', color:'#f59e0b', offset:'-ml-6'}]} /> }
+                ]
+            },
+            {
+                id: 13, title: "Ejercicio 13", subtitle: "Globo Retenido",
+                badge: "bg-fuchsia-500", grad: "from-fuchsia-600/30 to-purple-500/30 border-fuchsia-400",
+                enunciado: () => <span>Determina la tensión en la cuerda que sujeta al fondo una esfera de <MathDisplay inline latex="4 \text{ kg}" /> y volumen <MathDisplay inline latex="5 \times 10^{-3} m^3" /> en agua.</span>,
+                steps: [
+                    { latex: String.raw`W = 4 \cdot 10 = 40 \text{ N}`, text: "Peso de la esfera", speech: "El peso es de 40 Newtons hacia abajo.", graphic: <PhysicsGraphic liquids={[{height:70, color:'#3b82f6', label:'Agua'}]} objShape="sphere" objY={20} forces={[{name:'W=40', dir:'down', color:'#ef4444'}]} /> },
+                    { latex: String.raw`E = 1000 \cdot 10 \cdot (5 \times 10^{-3})`, text: "Cálculo de Empuje", speech: "Reemplazamos valores en la fórmula. Los tres ceros del 1000 anulan el diez a la menos tres." },
+                    { latex: String.raw`E = 50 \text{ N}`, text: "Empuje Resultante", speech: "Obtenemos 50 Newtons de fuerza hacia arriba. De nuevo, el empuje le gana al peso.", graphic: <PhysicsGraphic liquids={[{height:70, color:'#3b82f6', label:'Agua'}]} objShape="sphere" objY={20} forces={[{name:'E=50', dir:'up', color:'#22c55e'}, {name:'W=40', dir:'down', color:'#ef4444'}]} /> },
+                    { latex: String.raw`T + 40 = 50 \implies T = \mathbf{10 \text{ N}}`, text: "Tensión para Equilibrio", speech: "Para compensar, la cuerda tira hacia abajo con 10 Newtons, sumándose al peso de 40 N y equilibrando los 50 N de empuje.", graphic: <PhysicsGraphic liquids={[{height:70, color:'#3b82f6', label:'Agua'}]} objShape="sphere" objY={20} forces={[{name:'E=50', dir:'up', color:'#22c55e'}, {name:'W=40', dir:'down', color:'#ef4444', offset:'ml-6'}, {name:'T=10', dir:'down', color:'#f59e0b', offset:'-ml-6'}]} /> }
+                ]
+            },
+            {
+                id: 14, title: "Ejercicio 14", subtitle: "Volúmenes Proporcionales",
+                badge: "bg-purple-500", grad: "from-purple-600/30 to-violet-500/30 border-purple-400",
+                enunciado: () => <span>Un bloque de <MathDisplay inline latex="22 m^3" /> está en 2 líquidos: la parte superior mide <MathDisplay inline latex="2m" /> de alto (<MathDisplay inline latex="\rho_1=750" />) y la inferior <MathDisplay inline latex="8m" /> (<MathDisplay inline latex="\rho_2=1800" />). Calcula empuje en kN.</span>,
+                steps: [
+                    { latex: String.raw`\text{Altura Total} = 2 + 8 = 10m`, text: "Relación de Alturas", speech: "Si asumimos un bloque de área constante, el volumen sumergido en cada líquido será proporcional a las alturas dadas.", graphic: <PhysicsGraphic liquids={[{height:60, color:'#fbbf24', label:'Liq 2'}, {height:30, color:'#67e8f9', label:'Liq 1'}]} objShape="box" objY={20} /> },
+                    { latex: String.raw`V_1 = \left(\frac{2}{10}\right)22 = 4.4 m^3`, text: "Volumen Líquido 1", speech: "La parte superior ocupa 2 de 10 partes del bloque. El 20% de 22 m³ es 4.4 m³." },
+                    { latex: String.raw`V_2 = \left(\frac{8}{10}\right)22 = 17.6 m^3`, text: "Volumen Líquido 2", speech: "La parte inferior ocupa 8 de 10 partes. El 80% de 22 m³ es 17.6 m³." },
+                    { latex: String.raw`E_1 = 750 \cdot 10 \cdot 4.4 = 33000 \text{ N}`, text: "Empuje 1", speech: "Calculamos el empuje que aporta el líquido de arriba." },
+                    { latex: String.raw`E_2 = 1800 \cdot 10 \cdot 17.6 = 316800 \text{ N}`, text: "Empuje 2", speech: "Calculamos el gran empuje que aporta el líquido más denso de abajo." },
+                    { latex: String.raw`E_{\text{neto}} = 33000 + 316800 = \mathbf{349.8 \text{ kN}}`, text: "Resultado Neto", speech: "Sumamos ambos y lo convertimos a kiloNewtons. ¡Un empuje gigantesco de casi 350 kN!", graphic: <PhysicsGraphic liquids={[{height:60, color:'#fbbf24', label:'Liq 2'}, {height:30, color:'#67e8f9', label:'Liq 1'}]} objShape="box" objY={20} forces={[{name:'E_neto=349.8kN', dir:'up', color:'#22c55e'}]} /> }
+                ]
+            },
+            {
+                id: 15, title: "Ejercicio 15", subtitle: "Peso Aparente",
+                badge: "bg-violet-500", grad: "from-violet-600/30 to-indigo-500/30 border-violet-400",
+                enunciado: () => <span>Un objeto tiene peso aparente <MathDisplay inline latex="2.5 \text{ N}" /> en agua y <MathDisplay inline latex="2.7 \text{ N}" /> en aceite (<MathDisplay inline latex="\rho_{ac} = 600" />). Determine su peso real en N.</span>,
+                steps: [
+                    { latex: String.raw`P_{\text{ap}} = W_{\text{real}} - E`, text: "Fórmula de Peso Aparente", speech: "El peso aparente es lo que parece pesar un cuerpo sumergido. Se calcula restándole al peso real el valor del empuje.", graphic: <PhysicsGraphic liquids={[{height:80, color:'#3b82f6', label:'Agua'}]} objShape="box" objY={20} extraInfo="Peso Ap. = 2.5 N" /> },
+                    { latex: String.raw`2.5 = W - 1000 \cdot 10 \cdot V`, text: "Ecuación en el Agua", speech: "En el agua, el peso aparente es 2.5 N. La densidad es 1000." },
+                    { latex: String.raw`2.7 = W - 600 \cdot 10 \cdot V`, text: "Ecuación en el Aceite", speech: "En el aceite, el peso aparente es 2.7 N. La densidad es 600.", graphic: <PhysicsGraphic liquids={[{height:80, color:'#fcd34d', label:'Aceite'}]} objShape="box" objY={20} extraInfo="Peso Ap. = 2.7 N" /> },
+                    { latex: String.raw`0.2 = 4000 \cdot V \implies V = 0.00005 m^3`, text: "Sistema de Ecuaciones", speech: "Restando ambas ecuaciones algebraicamente, eliminamos la W y logramos despejar el volumen V de la pieza." },
+                    { latex: String.raw`W = 2.5 + 10000(0.00005) = \mathbf{3 \text{ N}}`, text: "Peso Real Encontrado", speech: "Reemplazamos el volumen en la primera ecuación. Operamos y ¡voilá! El peso real original del objeto es 3 Newtons.", graphic: <PhysicsGraphic liquids={[{height:50, color:'#94a3b8', label:'Aire'}]} objShape="box" objY={20} forces={[{name:'W=3N', dir:'down', color:'#ef4444'}]} extraInfo="Peso Real" /> }
+                ]
+            }
+        ];
+
+        // Animated Robot Tutor Component
+        const RobotTutor = ({ step, maxSteps }) => {
+            const isFinal = step >= maxSteps;
+            const getArmClass = (isLeft) => `absolute top-1/2 w-2 h-4 bg-teal-200 border-[2px] border-cyan-800 rounded-full origin-top transition-all ${isLeft ? '-left-1' : '-right-1'} ${isFinal ? (isLeft ? 'rotate-[150deg] animate-pulse' : '-rotate-[150deg] animate-pulse') : (isLeft ? 'rotate-45' : '-rotate-45')}`;
+            
+            return (
+                <div className={`relative flex flex-col items-center drop-shadow-xl select-none animate-robotFloat`}>
+                    {/* Antena */}
+                    <div className="relative z-0 flex flex-col items-center translate-y-1">
+                        <div className={`w-3 h-3 rounded-full shadow-[0_0_8px_currentColor] z-10 transition-colors ${isFinal ? 'text-green-400 bg-green-400' : 'text-cyan-400 bg-cyan-400 animate-pulse'}`}></div>
+                        <div className="w-1 h-3 bg-slate-400"></div>
+                    </div>
+                    {/* Cabeza / Escafandra */}
+                    <div className="relative z-10 w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-teal-400 to-cyan-700 rounded-2xl border-[3px] border-slate-800 shadow-xl flex items-center justify-center p-1.5">
+                        <div className="w-full h-full bg-slate-900 rounded-xl flex flex-col items-center justify-center p-1 relative overflow-hidden border-2 border-cyan-300/50">
+                            {/* Visor / Ojos */}
+                            <div className="w-full flex justify-between px-1 mb-1">
+                                <div className={`w-2.5 h-2.5 rounded-full ${isFinal ? 'bg-green-400' : 'bg-cyan-300 animate-pulse'}`}></div>
+                                <div className={`w-2.5 h-2.5 rounded-full ${isFinal ? 'bg-green-400' : 'bg-cyan-300 animate-pulse'}`}></div>
+                            </div>
+                            {/* Boca wave */}
+                            <div className={`w-4 h-1.5 rounded-full ${isFinal ? 'bg-green-400 w-6 h-3 rounded-b-full' : 'bg-cyan-200'}`}></div>
+                            {/* Reflexión agua */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-cyan-400/20 to-transparent"></div>
+                        </div>
+                    </div>
+                    {/* Brazos */}
+                    <div className={getArmClass(true)}></div>
+                    <div className={getArmClass(false)}></div>
+                </div>
+            );
+        };
+
+        // Main App
+        function App() {
+            const [view, setView] = useState('home');
+            const [exIdx, setExIdx] = useState(0);
+            const [step, setStep] = useState(0);
+            const [isMuted, setIsMuted] = useState(false);
+            const scrollContainerRef = useRef(null);
+
+            const currentExercise = EXERCISES[exIdx];
+            const maxSteps = currentExercise.steps.length - 1;
+            const stepData = currentExercise.steps[step];
+            const EnunciadoText = currentExercise.enunciado;
+
+            const handleInteraction = () => AudioController.init();
+
+            useEffect(() => {
+                if(scrollContainerRef.current) scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+            }, [step, exIdx, view]);
+
+            const startExercise = (index) => {
+                handleInteraction(); AudioController.play('pop');
+                setExIdx(index); setStep(0); setView('lab');
+            };
+
+            const nextStep = () => {
+                handleInteraction();
+                if (step < maxSteps) {
+                    setStep(step + 1);
+                    AudioController.play(step + 1 === maxSteps ? 'success' : 'pop');
+                } else if (exIdx < EXERCISES.length - 1) {
+                    setExIdx(exIdx + 1); setStep(0); AudioController.play('pop');
+                } else {
+                    setView('home'); AudioController.play('pop');
+                }
+            };
+
+            const prevStep = () => {
+                handleInteraction();
+                if (step > 0) { setStep(step - 1); AudioController.play('pop'); }
+            };
+
+            const toggleMute = () => { handleInteraction(); setIsMuted(AudioController.toggleMute()); };
+
+            if (view === 'home') {
+                return (
+                    <div className="w-screen min-h-[100dvh] bg-gradient-to-br from-[#0c4a6e] via-[#0369a1] to-[#0f766e] flex flex-col items-center p-4 sm:p-6 relative font-fun overflow-y-auto scrollbar-hide">
+                        {/* Deco Olas */}
+                        <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 50% 50%, #bae6fd 10%, transparent 10.5%)', backgroundSize: '40px 40px' }}></div>
+                        
+                        <div className="w-[96%] max-w-[1400px] z-20 flex items-center justify-between mb-8">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl border-2 border-cyan-300 bg-white/10 backdrop-blur text-cyan-200 font-black tracking-widest uppercase shadow">
+                                <Droplet className="w-5 h-5" /> Lab Ciencias
+                            </div>
+                            <button onClick={toggleMute} className="p-3 rounded-2xl bg-white/10 border-2 border-white/20 text-white hover:bg-white/20 transition-all">
+                                {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                            </button>
+                        </div>
+
+                        <div className="relative z-10 text-center w-full max-w-6xl flex flex-col items-center">
+                            <h1 className="text-4xl sm:text-6xl md:text-7xl font-black text-white mb-4 drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] tracking-tighter uppercase">
+                                Hidrostática: <span className="text-cyan-300 underline decoration-wavy decoration-teal-400">Empuje</span>
+                            </h1>
+                            <p className="text-lg sm:text-2xl text-cyan-50 mb-10 font-bold max-w-3xl leading-relaxed">
+                                Domina el Principio de Arquímedes con estos 15 retos interactivos explicados paso a paso. 🌊⚓
+                            </p>
+
+                            <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                                {EXERCISES.map((ex, idx) => (
+                                    <button
+                                        key={ex.id} onClick={() => startExercise(idx)}
+                                        className="group p-4 rounded-3xl bg-gradient-to-br bg-opacity-90 backdrop-blur-sm border-[3px] border-white/30 hover:-translate-y-2 hover:shadow-[0_10px_25px_rgba(0,0,0,0.4)] transition-all flex flex-col text-left shadow-lg overflow-hidden relative"
+                                        style={{ backgroundImage: `linear-gradient(to bottom right, var(--tw-gradient-stops))` }}
+                                    >
+                                        <div className={`absolute inset-0 opacity-70 ${ex.grad}`}></div>
+                                        <div className="relative z-10 flex flex-col h-full">
+                                            <span className={`${ex.badge} w-fit text-white text-xs font-black px-2 py-1 rounded mb-3 shadow`}>
+                                                RETO {ex.id}
+                                            </span>
+                                            <div className="flex-1 my-2 bg-white/95 rounded-xl p-2 shadow-inner border border-white/60 flex items-center justify-center overflow-hidden pointer-events-none math-card min-h-[4rem]">
+                                                <MathDisplay latex={ex.steps[0].latex} />
+                                            </div>
+                                            <div className="text-white text-sm font-bold text-center mt-1 drop-shadow-md">
+                                                {ex.subtitle}
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // Calculamos el gráfico actual analizando los pasos hasta el actual
+            const stepsUpToCurrent = currentExercise.steps.slice(0, step + 1);
+            let currentGraphicIndex = -1;
+            for (let i = stepsUpToCurrent.length - 1; i >= 0; i--) {
+                if (stepsUpToCurrent[i].graphic) {
+                    currentGraphicIndex = i;
+                    break;
+                }
+            }
+            const currentGraphic = currentGraphicIndex !== -1 ? stepsUpToCurrent[currentGraphicIndex].graphic : null;
+
+            return (
+                <div className="w-screen h-[100dvh] bg-gradient-to-b from-[#0f172a] to-[#1e3a8a] text-slate-800 flex flex-col p-2 sm:p-4 relative font-fun overflow-hidden">
+                    {/* Top NavBar */}
+                    <div className="shrink-0 z-20 w-full max-w-[1400px] mx-auto flex justify-between items-center mb-3 px-1">
+                        <button onClick={() => { AudioController.play('pop'); setView('home'); }} className="flex items-center px-4 py-2 rounded-2xl bg-white/10 border-2 border-white/20 text-white font-bold hover:bg-white/20 transition-all">
+                            <Home className="w-5 h-5 sm:mr-2" /> <span className="hidden sm:inline">Ejercicios</span>
+                        </button>
+                        
+                        <div className="flex items-center gap-1.5 bg-black/40 p-1.5 rounded-2xl border border-white/10 overflow-x-auto scrollbar-hide max-w-[50vw]">
+                            {EXERCISES.map((ex, i) => (
+                                <button key={ex.id} onClick={() => startExercise(i)}
+                                    className={`shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl font-black text-sm transition-all ${exIdx === i ? 'bg-cyan-400 text-slate-900 scale-110 shadow-[0_0_10px_rgba(34,211,238,0.6)]' : 'text-white hover:bg-white/20'}`}>
+                                    {ex.id}
+                                </button>
+                            ))}
+                        </div>
+
+                        <button onClick={toggleMute} className="p-2 rounded-2xl bg-white/10 border-2 border-white/20 text-white hover:bg-white/20 transition-all">
+                            {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                        </button>
+                    </div>
+
+                    {/* Main Content Area */}
+                    <div className="flex-1 z-10 w-full max-w-[1400px] mx-auto bg-white rounded-[2rem] border-[6px] border-slate-200 shadow-2xl flex flex-col overflow-hidden relative">
+                        
+                        {/* Enunciado */}
+                        <div className="shrink-0 bg-slate-800 border-b-[4px] border-cyan-500 px-4 py-4 flex flex-col relative z-20">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="bg-cyan-400 text-slate-900 font-black text-xs px-2 py-1 rounded shadow-sm tracking-widest uppercase">{currentExercise.title}</span>
+                                <span className="text-cyan-100 font-bold text-xs bg-white/10 px-2 py-1 rounded">{currentExercise.subtitle}</span>
+                            </div>
+                            <div className="text-white font-bold text-lg sm:text-xl text-center leading-snug math-enunciado">
+                                <EnunciadoText />
+                            </div>
+                        </div>
+
+                        {/* Split Section: Graphic Left, Steps Right */}
+                        <div className="flex-1 flex flex-col sm:flex-row relative bg-slate-50 overflow-hidden">
+                            
+                            {/* Panel Izquierdo: Gráfico Dinámico Fijo */}
+                            <div className="w-full sm:w-1/2 md:w-5/12 lg:w-1/3 p-4 sm:p-6 border-b sm:border-b-0 sm:border-r border-slate-200 flex flex-col items-center justify-center bg-white/40 relative">
+                                <div className="absolute inset-0 opacity-[0.04] bg-[radial-gradient(#0891b2_2px,transparent_2px)] [background-size:16px_16px]"></div>
+                                
+                                {/* Contenedor del Gráfico que reacciona a los pasos */}
+                                <div className="relative z-10 w-full animate-jellyPop" key={`graphic-${exIdx}-${currentGraphicIndex}`}>
+                                    {currentGraphic}
+                                </div>
+                                
+                                {/* Título de la acción actual */}
+                                <div key={`badge-${exIdx}-${step}`} className="z-20 mt-6 animate-jellyPop text-center">
+                                    <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-black text-sm sm:text-base shadow-md border-2 ${step === maxSteps ? 'bg-green-400 text-slate-900 border-green-200' : 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white border-cyan-400'}`}>
+                                        <Sparkles className="w-5 h-5" /> {stepData.text}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Panel Derecho: Cálculos Matemáticos */}
+                            <div className="w-full sm:w-1/2 md:w-7/12 lg:w-2/3 flex flex-col p-4 relative overflow-hidden bg-slate-50">
+                                <div ref={scrollContainerRef} className="w-full flex-1 flex flex-col items-center z-10 space-y-4 overflow-y-auto scrollbar-hide pb-20">
+                                    {currentExercise.steps.slice(0, step + 1).map((s, idx) => (
+                                        <div key={`${exIdx}-${idx}`} className={`w-full max-w-2xl flex flex-col items-center transition-all duration-300 ${idx === step ? 'opacity-100 scale-100 animate-slideInRight' : 'opacity-50 scale-95'}`}>
+                                            <div className={`px-4 py-3 w-fit max-w-full text-center rounded-2xl overflow-x-auto scrollbar-hide flex items-center justify-center min-h-[4rem] ${idx === step ? (step === maxSteps ? 'bg-green-300 border-4 border-green-500 math-current shadow-lg' : 'bg-white border-4 border-cyan-400 math-current shadow-md') : 'bg-slate-200 border-2 border-slate-300 math-history'}`}>
+                                                <MathDisplay latex={s.latex} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                        </div>
+
+                        {/* Área del Robot Tutor */}
+                        <div className="shrink-0 bg-white w-full px-4 py-3 sm:px-6 flex items-center gap-4 border-t-4 border-slate-200 z-30 relative shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+                            <div className="shrink-0 absolute -top-10 sm:relative sm:top-0 drop-shadow-lg">
+                                <RobotTutor step={step} maxSteps={maxSteps} />
+                            </div>
+                            <div className="flex-1 text-sm sm:text-base font-bold text-slate-700 leading-snug bg-cyan-50/80 p-3 rounded-xl border-2 border-cyan-100 shadow-inner ml-[4rem] sm:ml-0 min-h-[4rem] flex items-center">
+                                <div key={`speech-${exIdx}-${step}`} className="animate-slideInRight">{stepData.speech}</div>
+                            </div>
+                        </div>
+
+                        {/* Botonera de Navegación */}
+                        <div className="shrink-0 bg-slate-100 p-2 sm:p-3 w-full border-t-4 border-white z-30">
+                            <div className="flex justify-center w-full max-w-3xl mx-auto gap-2 h-10 sm:h-12">
+                                <button onClick={prevStep} disabled={step === 0} className="flex-[1] bg-slate-300 text-slate-600 rounded-l-xl font-black text-sm sm:text-base flex items-center justify-center gap-1 active:translate-y-[2px] disabled:opacity-40 hover:bg-slate-400 hover:text-white transition-all">
+                                    <ChevronLeft className="w-5 h-5 stroke-[3px]" /> <span className="hidden sm:inline">Atrás</span>
+                                </button>
+                                <div className="bg-slate-700 text-white font-black px-4 flex items-center justify-center text-sm sm:text-base shadow-inner min-w-[5rem]">
+                                    {step + 1} / {maxSteps + 1}
+                                </div>
+                                <button onClick={nextStep} className={`flex-[2] text-white rounded-r-xl font-black text-sm sm:text-lg flex items-center justify-center gap-2 active:translate-y-[2px] transition-all shadow-md ${step === maxSteps ? 'bg-green-500 hover:bg-green-600 animate-pulse' : 'bg-cyan-500 hover:bg-cyan-600'}`}>
+                                    <span>{step < maxSteps ? 'Siguiente Paso' : (exIdx < EXERCISES.length - 1 ? 'Siguiente Reto' : 'Volver al Inicio')}</span>
+                                    <ChevronRight className="w-5 h-5 stroke-[3px]" />
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
